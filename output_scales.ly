@@ -19,6 +19,10 @@
     }
     
     \new Staff {
+      \markup {
+        \bold \center-align "Major Scale in C"
+        \vspace #2  % Add some vertical space between title and staff
+      }
       \relative c' {
         \key c \major
         \time 4/4
@@ -41,6 +45,10 @@
     }
     
     \new Staff {
+      \markup {
+        \bold \center-align "Harmonic Minor Scale in C"
+        \vspace #2  % Add some vertical space between title and staff
+      }
       \relative c' {
         \key c \minor
         \time 4/4
