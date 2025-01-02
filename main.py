@@ -3,7 +3,8 @@
 """
 This script generates separate LilyPond (.ly) files for specified scales,
 compiles each into a centered PDF and a MIDI file using the LilyPond
-command-line tool, and then converts the PDFs to PNG images using ImageMagick.
+command-line tool, converts the PDFs to PNG images using ImageMagick or pdf2image,
+and finally combines selected scale PNGs into a single image with descriptive text.
 Existing output files are deleted before generating new ones to ensure consistency.
 Each scale is placed in its own file with an appropriate title.
 """
@@ -11,6 +12,8 @@ Each scale is placed in its own file with an appropriate title.
 import subprocess
 import sys
 import os
+from PIL import Image, ImageDraw, ImageFont
+from pdf2image import convert_from_path
 
 # Define the scale intervals for different scale types
 SCALE_INTERVALS = {
@@ -24,7 +27,7 @@ NOTE_ORDER = ['c', 'c#', 'd', 'd#', 'e', 'f',
              'f#', 'g', 'g#', 'a', 'a#', 'b']
 
 # List of scale types to generate
-SCALE_TYPES = ["major", "minor"]  # Modified to include only major and minor
+SCALE_TYPES = ["major", "harmonic_minor"]  # Modified to include only major and harmonic_minor
 
 def get_note_index(note):
     """
@@ -221,7 +224,7 @@ def convert_pdf_to_png(pdf_file, png_file):
         png_file (str): The target PNG filename.
     """
     try:
-        print(f"Converting '{pdf_file}' to '{png_file}'...")
+        print(f"Converting '{pdf_file}' to '{png_file}' using ImageMagick...")
         subprocess.run(['convert', '-density', '300', pdf_file, '-quality', '90', png_file], check=True)
         print(f"Conversion successful. Generated '{png_file}'.\n")
     except subprocess.CalledProcessError as e:
@@ -230,6 +233,138 @@ def convert_pdf_to_png(pdf_file, png_file):
     except FileNotFoundError:
         print("Error: ImageMagick's 'convert' command is not installed or not found in PATH.")
         sys.exit(1)
+
+def convert_pdf_to_png_using_pdf2image(pdf_file, png_file):
+    """
+    Converts a PDF file to a PNG image using pdf2image.
+
+    Args:
+        pdf_file (str): The source PDF filename.
+        png_file (str): The target PNG filename.
+    """
+    try:
+        print(f"Converting '{pdf_file}' to '{png_file}' using pdf2image...")
+        images = convert_from_path(pdf_file, dpi=300)
+        # Save the first page as PNG
+        if images:
+            images[0].save(png_file, 'PNG')
+            print(f"Conversion successful. Generated '{png_file}'.\n")
+        else:
+            print(f"No pages found in '{pdf_file}'.")
+    except Exception as e:
+        print(f"An error occurred while converting '{pdf_file}' to PNG: {e}")
+        sys.exit(1)
+
+def find_lowest_black_pixel(image_path):
+    """
+    Finds the y-coordinate of the lowest black pixel in the image.
+
+    Args:
+        image_path (str): Path to the PNG image.
+
+    Returns:
+        int: Y-coordinate of the lowest black pixel. Returns image height if no black pixels are found.
+    """
+    try:
+        with Image.open(image_path) as img:
+            img = img.convert('L')  # Convert to grayscale
+            width, height = img.size
+            pixels = img.load()
+
+            for y in range(height-1, -1, -1):
+                for x in range(width):
+                    if pixels[x, y] < 10:  # Threshold for black pixel
+                        return y
+            return height  # If no black pixels found
+    except Exception as e:
+        print(f"Error processing image '{image_path}': {e}")
+        sys.exit(1)
+
+def combine_images_with_text(image1_path, image2_path, output_path, text):
+    """
+    Combines two images side by side, aligned based on their lowest black pixels,
+    and adds descriptive text below.
+
+    Args:
+        image1_path (str): Path to the first PNG image.
+        image2_path (str): Path to the second PNG image.
+        output_path (str): Path to save the combined PNG image.
+        text (str): Descriptive text to add below the images.
+    """
+    try:
+        # Open images
+        img1 = Image.open(image1_path).convert("RGBA")
+        img2 = Image.open(image2_path).convert("RGBA")
+
+        # Find lowest black pixels
+        img1_lowest = find_lowest_black_pixel(image1_path)
+        img2_lowest = find_lowest_black_pixel(image2_path)
+
+        # Calculate the y-offsets to align the images based on lowest black pixel
+        img1_offset_y = img1.size[1] - img1_lowest
+        img2_offset_y = img2.size[1] - img2_lowest
+        max_offset = max(img1_offset_y, img2_offset_y)
+
+        # Calculate new image height
+        combined_height = max(img1.size[1] + (max_offset - img1_offset_y),
+                             img2.size[1] + (max_offset - img2_offset_y)) + 100  # Extra space for text
+
+        # Calculate new image width
+        combined_width = img1.size[0] + img2.size[0] + 50  # Space between images
+
+        # Create a new blank image
+        combined_img = Image.new('RGBA', (combined_width, combined_height), 'white')
+
+        # Paste img1
+        paste_x1 = 0
+        paste_y1 = combined_height - (img1.size[1] + (max_offset - img1_offset_y)) - 100  # Leave space for text
+        combined_img.paste(img1, (paste_x1, paste_y1), img1)
+
+        # Paste img2
+        paste_x2 = img1.size[0] + 50  # 50 pixels space between images
+        paste_y2 = combined_height - (img2.size[1] + (max_offset - img2_offset_y)) - 100
+        combined_img.paste(img2, (paste_x2, paste_y2), img2)
+
+        # Add text
+        draw = ImageDraw.Draw(combined_img)
+        try:
+            # Try to use a TrueType font
+            font = ImageFont.truetype("arial.ttf", 24)
+        except IOError:
+            # If the font is not found, use the default font
+            font = ImageFont.load_default()
+
+        text_width, text_height = draw.textsize(text, font=font)
+        text_position = ((combined_width - text_width) // 2, combined_height - 80)  # 80 pixels from bottom
+        draw.text(text_position, text, fill="black", font=font)
+
+        # Save the combined image
+        combined_img = combined_img.convert("RGB")  # Remove alpha for saving as JPEG or PNG
+        combined_img.save(output_path)
+        print(f"Combined image saved as '{output_path}'.\n")
+    except Exception as e:
+        print(f"Error combining images: {e}")
+        sys.exit(1)
+
+def delete_existing_output_files(scale_types):
+    """
+    Deletes existing output files based on the scale types.
+
+    Args:
+        scale_types (list): List of scale types.
+    """
+    existing_files = []
+    for scale_type in scale_types:
+        base = f"{scale_type}_scale"
+        existing_files.extend([
+            f"{base}.ly",
+            f"{base}.pdf",
+            f"{base}.midi",
+            f"{base}.png"
+        ])
+    # Add combined image files
+    existing_files.append("combined_scales.png")
+    delete_existing_files(existing_files)
 
 if __name__ == "__main__":
     # User-defined variables
@@ -244,21 +379,8 @@ if __name__ == "__main__":
     # Prepare list of scale types to generate
     scales_to_generate = SCALE_TYPES
 
-    # Define output filenames
-    # Since we're generating separate files, we'll handle filenames within the loop
-
     # Delete existing output files
-    # Collect all possible output filenames based on SCALE_TYPES
-    existing_files = []
-    for scale_type in scales_to_generate:
-        base = f"{scale_type}_scale"
-        existing_files.extend([
-            f"{base}.ly",
-            f"{base}.pdf",
-            f"{base}.midi",
-            f"{base}.png"
-        ])
-    delete_existing_files(existing_files)
+    delete_existing_output_files(scales_to_generate)
 
     # Generate, compile, and convert each scale
     for scale_type in scales_to_generate:
@@ -266,11 +388,38 @@ if __name__ == "__main__":
         ly_filename = f"{base_filename}.ly"
         # Generate the LilyPond file
         print(f"Generating {scale_type.replace('_', ' ').title()} Scale...")
-        generate_lilypond(ly_filename, scale_type, key, octaves)
+        base = generate_lilypond(ly_filename, scale_type, key, octaves)
         
         # Convert the generated PDF to PNG
-        pdf_filename = f"{base_filename}.pdf"
-        png_filename = f"{base_filename}.png"
+        pdf_filename = f"{base}.pdf"
+        png_filename = f"{base}.png"
+
+        # Choose conversion method: ImageMagick or pdf2image
+        # Uncomment one of the following lines based on your preference
+
+        # Using ImageMagick's convert
         convert_pdf_to_png(pdf_filename, png_filename)
 
-    print("All scales have been generated, compiled, and converted successfully.")
+        # Using pdf2image (comment out if using ImageMagick)
+        # convert_pdf_to_png_using_pdf2image(pdf_filename, png_filename)
+
+    # Combine Major and Harmonic Minor scales into a single image with description
+    combined_image_path = "combined_scales.png"
+    major_png = "major_scale.png"
+    harmonic_minor_png = "harmonic_minor_scale.png"
+
+    # Check if both PNG files exist
+    if not (os.path.exists(major_png) and os.path.exists(harmonic_minor_png)):
+        print(f"Error: Required PNG files '{major_png}' and/or '{harmonic_minor_png}' not found.")
+        sys.exit(1)
+
+    # Define descriptive text
+    description_text = (
+        "Comparison of Major Scale and Harmonic Minor Scale\n"
+        "The Major scale has a bright and happy sound, while the Harmonic Minor scale introduces a distinctive, exotic flavor due to its augmented second."
+    )
+
+    # Combine the images with text
+    combine_images_with_text(major_png, harmonic_minor_png, combined_image_path, description_text)
+
+    print("All scales have been generated, compiled, converted, and combined successfully.")
