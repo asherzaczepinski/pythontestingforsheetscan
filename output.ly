@@ -13,7 +13,7 @@
   left-margin = 2\cm
   right-margin = 2\cm
   indent = 0
-  system-count = 1  % Force single system
+  % Removed system-count to allow multiple systems
   line-width = 16\cm  % Adjust line width as needed
 }
 
@@ -24,12 +24,11 @@
       \key c \major
       \time 4/4
 
-      \section "Major Scale"
+      \markup { \bold "Major Scale" }
       c4 d4 e4 f4 g4 a4 b4 c4 d4 e4 f4 g4 a4 b4 c4 b4 a4 g4 f4 e4 d4 c4 b4 a4 g4 f4 e4 d4 c4
 
-      \break  % Start a new line or system
+      \break  % Start a new system
 
-      \section "Harmonic Minor Scale"
       c4 d4 d#4 f4 g4 g#4 b4 c4 d4 d#4 f4 g4 g#4 b4 c4 b4 g#4 g4 f4 d#4 d4 c4 b4 g#4 g4 f4 d#4 d4 c4
     }
   }
