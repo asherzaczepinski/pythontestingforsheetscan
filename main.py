@@ -5,7 +5,7 @@ This script generates a combined LilyPond (.ly) file containing specified scales
 It automatically compiles the LilyPond file into a centered PDF and a MIDI file
 using the LilyPond command-line tool. Users can specify the key, scale types,
 and number of octaves. Existing output files are deleted before generating new
-ones to ensure consistency.
+ones to ensure consistency. Each scale is placed on a separate page with its own title.
 """
 
 import subprocess
@@ -120,7 +120,7 @@ def delete_existing_files(filenames):
 
 def generate_lilypond(filename, scales, key, octaves):
     """
-    Generates a LilyPond file containing multiple scales.
+    Generates a LilyPond file containing multiple scales, each on separate pages with individual titles.
     
     Args:
         filename (str): The filename for the LilyPond (.ly) file.
@@ -128,18 +128,10 @@ def generate_lilypond(filename, scales, key, octaves):
         key (str): The key for the scales.
         octaves (int): Number of octaves.
     """
-    # Define the header with metadata
-    scale_titles = ' and '.join([scale.replace('_', ' ').title() for scale in scales])
-    header = f"""
-\\version "2.22.0"  % Specify the LilyPond version
+    # Define the LilyPond version
+    version = '\\version "2.22.0"  % Specify the LilyPond version\n\n'
 
-\\header {{
-  title = "Scales: {scale_titles} in {key.capitalize()}"
-  composer = "Traditional"
-}}
-"""
-
-    # Define the paper settings to center the music and fit on one page
+    # Define the paper settings to center the music and fit on one page per score
     paper = r"""
 \paper {
   top-margin = 1.5\cm
@@ -147,16 +139,16 @@ def generate_lilypond(filename, scales, key, octaves):
   left-margin = 2\cm
   right-margin = 2\cm
   indent = 0
-  system-count = 1  % Force single system
   line-width = 16\cm  % Adjust line width as needed
 }
 """
 
-    # Initialize the music variable
-    music = ""
+    # Initialize the book with version and paper settings
+    lilypond_content = version + paper + "\n\\book {\n"
 
-    # Generate each scale's notes and add to the music variable
-    for i, scale_type in enumerate(scales):
+    # Generate each scale's \score block
+    for scale_type in scales:
+        scale_title = f"{scale_type.replace('_', ' ').title()} Scale in {key.capitalize()}"
         notes = generate_scale_notes(key, scale_type, octaves)
         relative_pitch = "c'"  # Starting pitch
 
@@ -166,36 +158,34 @@ def generate_lilypond(filename, scales, key, octaves):
         else:
             key_signature = f"\\key {key.lower()} \\major"
 
-        # Define a separate Staff for each scale
-        staff = f"""
-\\new Staff {{
-  \\relative {relative_pitch} {{
-    {key_signature}
-    \\time 4/4
+        # Create the \score block for the current scale
+        score = f"""
+  \\score {{
+    \\header {{
+      title = "{scale_title}"
+      composer = "Traditional"
+    }}
+    
+    \\new Staff {{
+      \\relative {relative_pitch} {{
+        {key_signature}
+        \\time 4/4
 
-    {notes}
+        {notes}
+      }}
+    }}
+
+    \\layout {{
+      indent = 0  % Remove indentation to center the music
+      ragged-right = ##t  % Allow ragged right margins
+    }}
+    \\midi {{ }}
   }}
-}}
 """
-        music += staff
+        lilypond_content += score
 
-    # Define the score with layout settings to center the music
-    score = f"""
-\\score {{
-  <<
-    {music}
-  >>
-
-  \\layout {{
-    indent = 0  % Remove indentation to center the music
-    ragged-right = ##t  % Allow ragged right margins
-  }}
-  \\midi {{ }}
-}}
-"""
-
-    # Combine header, paper, and score
-    lilypond_content = header + "\n" + paper + "\n" + score
+    # Close the book
+    lilypond_content += "}\n"
 
     # Write the content to the specified file
     try:
@@ -244,7 +234,8 @@ if __name__ == "__main__":
     delete_existing_files(files_to_delete)
 
     # Generate and compile the combined LilyPond file
-    print(f"Generating scales: {', '.join([s.replace('_', ' ').title() for s in scales_to_generate])}...")
+    scale_names = ', '.join([s.replace('_', ' ').title() for s in scales_to_generate])
+    print(f"Generating scales: {scale_names}...")
     generate_lilypond(ly_filename, scales_to_generate, key, octaves)
 
     print("All scales have been generated successfully.")
