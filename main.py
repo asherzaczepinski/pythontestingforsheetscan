@@ -1,11 +1,11 @@
 # lilypond_generator.py
 
 """
-This script generates a combined LilyPond (.ly) file containing specified scales.
-It automatically compiles the LilyPond file into a centered PDF and a MIDI file
-using the LilyPond command-line tool. Users can specify the key, scale types,
-and number of octaves. Existing output files are deleted before generating new
-ones to ensure consistency. Each scale is placed on a separate page with its own title.
+This script generates separate LilyPond (.ly) files for specified scales,
+compiles each into a centered PDF and a MIDI file using the LilyPond
+command-line tool, and then converts the PDFs to PNG images using ImageMagick.
+Existing output files are deleted before generating new ones to ensure consistency.
+Each scale is placed in its own file with an appropriate title.
 """
 
 import subprocess
@@ -24,7 +24,7 @@ NOTE_ORDER = ['c', 'c#', 'd', 'd#', 'e', 'f',
              'f#', 'g', 'g#', 'a', 'a#', 'b']
 
 # List of scale types to generate
-SCALE_TYPES = ["major", "harmonic_minor"]
+SCALE_TYPES = ["major", "minor"]  # Modified to include only major and minor
 
 def get_note_index(note):
     """
@@ -118,14 +118,14 @@ def delete_existing_files(filenames):
                 print(f"Error deleting file '{filename}': {e}")
                 sys.exit(1)
 
-def generate_lilypond(filename, scales, key, octaves):
+def generate_lilypond(filename, scale_type, key, octaves):
     """
-    Generates a LilyPond file containing multiple scales, each on separate pages with individual titles.
-    
+    Generates a LilyPond file for a specific scale type.
+
     Args:
         filename (str): The filename for the LilyPond (.ly) file.
-        scales (list): List of scale types to include.
-        key (str): The key for the scales.
+        scale_type (str): The type of scale ('major', 'minor', 'harmonic_minor').
+        key (str): The key for the scale.
         octaves (int): Number of octaves.
     """
     # Define the LilyPond version
@@ -143,49 +143,48 @@ def generate_lilypond(filename, scales, key, octaves):
 }
 """
 
-    # Initialize the book with version and paper settings
-    lilypond_content = version + paper + "\n\\book {\n"
+    # Start building the LilyPond content
+    lilypond_content = version + paper + "\n\\score {\n"
 
-    # Generate each scale's \score block
-    for scale_type in scales:
-        scale_title = f"{scale_type.replace('_', ' ').title()} Scale in {key.capitalize()}"
-        notes = generate_scale_notes(key, scale_type, octaves)
-        relative_pitch = "c'"  # Starting pitch
+    # Generate the scale
+    scale_title = f"{scale_type.replace('_', ' ').title()} Scale in {key.capitalize()}"
+    notes = generate_scale_notes(key, scale_type, octaves)
+    relative_pitch = "c'"  # Starting pitch
 
-        # Define the key signature
-        if scale_type in ["minor", "harmonic_minor"]:
-            key_signature = f"\\key {key.lower()} \\minor"
-        else:
-            key_signature = f"\\key {key.lower()} \\major"
+    # Define the key signature
+    if scale_type in ["minor", "harmonic_minor"]:
+        key_signature = f"\\key {key.lower()} \\minor"
+    else:
+        key_signature = f"\\key {key.lower()} \\major"
 
-        # Create the \score block for the current scale
-        score = f"""
-  \\score {{
-    \\header {{
-      title = "{scale_title}"
-      composer = "Traditional"
-    }}
-    
-    \\new Staff {{
-      \\relative {relative_pitch} {{
-        {key_signature}
-        \\time 4/4
-
-        {notes}
-      }}
-    }}
-
-    \\layout {{
-      indent = 0  % Remove indentation to center the music
-      ragged-right = ##t  % Allow ragged right margins
-    }}
-    \\midi {{ }}
+    # Create the \score block for the current scale
+    score = f"""
+  \\header {{
+    title = "{scale_title}"
+    composer = "Traditional"
   }}
-"""
-        lilypond_content += score
+  
+  \\new Staff {{
+    \\relative {relative_pitch} {{
+      {key_signature}
+      \\time 4/4
 
-    # Close the book
-    lilypond_content += "}\n"
+      {notes}
+    }}
+  }}
+
+  \\layout {{
+    indent = 0  % Remove indentation to center the music
+    ragged-right = ##t  % Allow ragged right margins
+  }}
+  \\midi {{ }}
+}}
+"""
+
+    lilypond_content += score
+
+    # Close the score
+    lilypond_content += "\n"
 
     # Write the content to the specified file
     try:
@@ -211,6 +210,27 @@ def generate_lilypond(filename, scales, key, octaves):
         print("Error: LilyPond is not installed or not found in PATH.")
         sys.exit(1)
 
+    return base_filename  # Return base name for further processing
+
+def convert_pdf_to_png(pdf_file, png_file):
+    """
+    Converts a PDF file to a PNG image using ImageMagick.
+
+    Args:
+        pdf_file (str): The source PDF filename.
+        png_file (str): The target PNG filename.
+    """
+    try:
+        print(f"Converting '{pdf_file}' to '{png_file}'...")
+        subprocess.run(['convert', '-density', '300', pdf_file, '-quality', '90', png_file], check=True)
+        print(f"Conversion successful. Generated '{png_file}'.\n")
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred while converting '{pdf_file}' to PNG: {e}")
+        sys.exit(1)
+    except FileNotFoundError:
+        print("Error: ImageMagick's 'convert' command is not installed or not found in PATH.")
+        sys.exit(1)
+
 if __name__ == "__main__":
     # User-defined variables
     key = "c"                 # Change this to your desired key (e.g., 'c', 'g#', 'eb')
@@ -225,17 +245,32 @@ if __name__ == "__main__":
     scales_to_generate = SCALE_TYPES
 
     # Define output filenames
-    ly_filename = "output_scales.ly"
-    pdf_filename = "output_scales.pdf"
-    midi_filename = "output_scales.midi"
+    # Since we're generating separate files, we'll handle filenames within the loop
 
     # Delete existing output files
-    files_to_delete = [ly_filename, pdf_filename, midi_filename]
-    delete_existing_files(files_to_delete)
+    # Collect all possible output filenames based on SCALE_TYPES
+    existing_files = []
+    for scale_type in scales_to_generate:
+        base = f"{scale_type}_scale"
+        existing_files.extend([
+            f"{base}.ly",
+            f"{base}.pdf",
+            f"{base}.midi",
+            f"{base}.png"
+        ])
+    delete_existing_files(existing_files)
 
-    # Generate and compile the combined LilyPond file
-    scale_names = ', '.join([s.replace('_', ' ').title() for s in scales_to_generate])
-    print(f"Generating scales: {scale_names}...")
-    generate_lilypond(ly_filename, scales_to_generate, key, octaves)
+    # Generate, compile, and convert each scale
+    for scale_type in scales_to_generate:
+        base_filename = f"{scale_type}_scale"
+        ly_filename = f"{base_filename}.ly"
+        # Generate the LilyPond file
+        print(f"Generating {scale_type.replace('_', ' ').title()} Scale...")
+        generate_lilypond(ly_filename, scale_type, key, octaves)
+        
+        # Convert the generated PDF to PNG
+        pdf_filename = f"{base_filename}.pdf"
+        png_filename = f"{base_filename}.png"
+        convert_pdf_to_png(pdf_filename, png_filename)
 
-    print("All scales have been generated successfully.")
+    print("All scales have been generated, compiled, and converted successfully.")
