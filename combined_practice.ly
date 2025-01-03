@@ -28,11 +28,10 @@
     % Force all accidentals to show (for any sharp or flat).
     \override Accidental #'force-accidental = ##t
 
-    \key f# \major  % Add key signature
+    % Explicitly hide the time signature
+    \set Score.timeSignatureVisibility = ##f
 
     \relative fis' {
-      \time 4/4
-
       fis4 gis4 ais4 b4 cis4 dis4 f4 fis4 gis4 ais4 b4 cis4 dis4 f4 fis4 f4 dis4 cis4 b4 ais4 gis4 fis4 f4 dis4 cis4 b4 ais4 gis4 fis4
     }
   }
@@ -55,11 +54,10 @@
     % Force all accidentals to show (for any sharp or flat).
     \override Accidental #'force-accidental = ##t
 
-    \key d# \minor  % Add key signature
+    % Explicitly hide the time signature
+    \set Score.timeSignatureVisibility = ##f
 
     \relative dis' {
-      \time 4/4
-
       dis4 f4 fis4 gis4 ais4 b4 cis4 dis4 f4 fis4 gis4 ais4 b4 cis4 dis4 cis4 b4 ais4 gis4 fis4 f4 dis4 cis4 b4 ais4 gis4 fis4 f4 dis4
     }
   }
