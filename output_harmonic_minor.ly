@@ -1,4 +1,10 @@
+
 \version "2.22.0"  % Specify the LilyPond version
+
+\header {
+  title = "Harmonic Minor Scale in C"
+  composer = "Traditional"
+}
 
 
 \paper {
@@ -7,16 +13,12 @@
   left-margin = 2\cm
   right-margin = 2\cm
   indent = 0
+  system-count = 1  % Force single system
   line-width = 16\cm  % Adjust line width as needed
 }
 
-\score {
 
-  \header {
-    title = "Harmonic Minor Scale in C"
-    composer = "Traditional"
-  }
-  
+\score {
   \new Staff {
     \relative c' {
       \key c \minor
@@ -32,4 +34,3 @@
   }
   \midi { }
 }
-

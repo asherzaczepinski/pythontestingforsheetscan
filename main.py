@@ -1,19 +1,14 @@
-# lilypond_generator.py
-
 """
-This script generates separate LilyPond (.ly) files for specified scales,
-compiles each into a centered PDF and a MIDI file using the LilyPond
-command-line tool, converts the PDFs to PNG images using ImageMagick or pdf2image,
-and finally combines selected scale PNGs into a single image with descriptive text.
-Existing output files are deleted before generating new ones to ensure consistency.
-Each scale is placed in its own file with an appropriate title.
+This script generates a single LilyPond (.ly) file containing multiple specified scales.
+It automatically compiles the LilyPond file into a centered PDF and a MIDI file
+using the LilyPond command-line tool. Users can specify the key, scale types,
+and number of octaves. Existing output files are deleted before generating new
+ones to ensure consistency.
 """
 
 import subprocess
 import sys
 import os
-from PIL import Image, ImageDraw, ImageFont
-from pdf2image import convert_from_path
 
 # Define the scale intervals for different scale types
 SCALE_INTERVALS = {
@@ -27,7 +22,7 @@ NOTE_ORDER = ['c', 'c#', 'd', 'd#', 'e', 'f',
              'f#', 'g', 'g#', 'a', 'a#', 'b']
 
 # List of scale types to generate
-SCALE_TYPES = ["major", "harmonic_minor"]  # Modified to include only major and harmonic_minor
+SCALE_TYPES = ["major", "minor", "harmonic_minor"]
 
 def get_note_index(note):
     """
@@ -121,52 +116,63 @@ def delete_existing_files(filenames):
                 print(f"Error deleting file '{filename}': {e}")
                 sys.exit(1)
 
-def generate_lilypond(filename, scale_type, key, octaves):
+def generate_lilypond_combined(filename, key, scale_types, octaves):
     """
-    Generates a LilyPond file for a specific scale type.
-
+    Generates a single LilyPond file containing multiple scales.
+    
     Args:
         filename (str): The filename for the LilyPond (.ly) file.
-        scale_type (str): The type of scale ('major', 'minor', 'harmonic_minor').
-        key (str): The key for the scale.
+        key (str): The key for the scales.
+        scale_types (list): List of scale types to include.
         octaves (int): Number of octaves.
     """
-    # Define the LilyPond version
-    version = '\\version "2.22.0"  % Specify the LilyPond version\n\n'
+    # Define the header with global metadata
+    global_header = f"""
+\\version "2.22.0"  % Specify the LilyPond version
 
-    # Define the paper settings to center the music and fit on one page per score
-    paper = r"""
-\paper {
-  top-margin = 1.5\cm
-  bottom-margin = 1.5\cm
-  left-margin = 2\cm
-  right-margin = 2\cm
+\\header {{
+  title = "{key.capitalize()} Scales"
+  composer = "Traditional"
+}}
+
+\\paper {{
+  top-margin = 1.5\\cm
+  bottom-margin = 1.5\\cm
+  left-margin = 2\\cm
+  right-margin = 2\\cm
   indent = 0
-  line-width = 16\cm  % Adjust line width as needed
-}
+  system-count = #0  % Allow multiple systems
+  line-width = 16\\cm  % Adjust line width as needed
+}}
 """
 
-    # Start building the LilyPond content
-    lilypond_content = version + paper + "\n\\score {\n"
+    # Initialize the content with the global header
+    lilypond_content = global_header + "\n"
 
-    # Generate the scale
-    scale_title = f"{scale_type.replace('_', ' ').title()} Scale in {key.capitalize()}"
-    notes = generate_scale_notes(key, scale_type, octaves)
-    relative_pitch = "c'"  # Starting pitch
+    # Iterate over each scale type and append its section
+    for scale_type in scale_types:
+        # Generate scale notes
+        notes = generate_scale_notes(key, scale_type, octaves)
 
-    # Define the key signature
-    if scale_type in ["minor", "harmonic_minor"]:
-        key_signature = f"\\key {key.lower()} \\minor"
-    else:
-        key_signature = f"\\key {key.lower()} \\major"
+        # Determine relative pitch based on number of octaves
+        # Starting at c' for simplicity
+        relative_pitch = "c'"
 
-    # Create the \score block for the current scale
-    score = f"""
-  \\header {{
-    title = "{scale_title}"
-    composer = "Traditional"
+        # Define the key signature
+        if scale_type in ["minor", "harmonic_minor"]:
+            key_signature = f"\\key {key.lower()} \\minor"
+        else:
+            key_signature = f"\\key {key.lower()} \\major"
+
+        # Define the score for the current scale
+        scale_score = f"""
+\\markup \\column {{
+  \\center-column {{
+    \\bold "{scale_type.replace('_', ' ').title()} Scale in {key.capitalize()}"
   }}
-  
+}}
+
+\\score {{
   \\new Staff {{
     \\relative {relative_pitch} {{
       {key_signature}
@@ -184,12 +190,10 @@ def generate_lilypond(filename, scale_type, key, octaves):
 }}
 """
 
-    lilypond_content += score
+        # Append the current scale's score to the content
+        lilypond_content += scale_score + "\n"
 
-    # Close the score
-    lilypond_content += "\n"
-
-    # Write the content to the specified file
+    # Write the combined content to the specified file
     try:
         with open(filename, 'w') as file:
             file.write(lilypond_content)
@@ -202,169 +206,13 @@ def generate_lilypond(filename, scale_type, key, octaves):
     try:
         print(f"Compiling the LilyPond file '{filename}'...")
         subprocess.run(['lilypond', filename], check=True)
-        base_filename = os.path.splitext(filename)[0]
-        pdf_filename = f"{base_filename}.pdf"
-        midi_filename = f"{base_filename}.midi"
-        print(f"Compilation successful. Generated '{pdf_filename}' and '{midi_filename}'.\n")
+        print(f"Compilation successful. Generated '{os.path.splitext(filename)[0]}.pdf' and '{os.path.splitext(filename)[0]}.midi'.\n")
     except subprocess.CalledProcessError as e:
         print(f"An error occurred while compiling '{filename}': {e}")
         sys.exit(1)
     except FileNotFoundError:
         print("Error: LilyPond is not installed or not found in PATH.")
         sys.exit(1)
-
-    return base_filename  # Return base name for further processing
-
-def convert_pdf_to_png(pdf_file, png_file):
-    """
-    Converts a PDF file to a PNG image using ImageMagick.
-
-    Args:
-        pdf_file (str): The source PDF filename.
-        png_file (str): The target PNG filename.
-    """
-    try:
-        print(f"Converting '{pdf_file}' to '{png_file}' using ImageMagick...")
-        subprocess.run(['convert', '-density', '300', pdf_file, '-quality', '90', png_file], check=True)
-        print(f"Conversion successful. Generated '{png_file}'.\n")
-    except subprocess.CalledProcessError as e:
-        print(f"An error occurred while converting '{pdf_file}' to PNG: {e}")
-        sys.exit(1)
-    except FileNotFoundError:
-        print("Error: ImageMagick's 'convert' command is not installed or not found in PATH.")
-        sys.exit(1)
-
-def convert_pdf_to_png_using_pdf2image(pdf_file, png_file):
-    """
-    Converts a PDF file to a PNG image using pdf2image.
-
-    Args:
-        pdf_file (str): The source PDF filename.
-        png_file (str): The target PNG filename.
-    """
-    try:
-        print(f"Converting '{pdf_file}' to '{png_file}' using pdf2image...")
-        images = convert_from_path(pdf_file, dpi=300)
-        # Save the first page as PNG
-        if images:
-            images[0].save(png_file, 'PNG')
-            print(f"Conversion successful. Generated '{png_file}'.\n")
-        else:
-            print(f"No pages found in '{pdf_file}'.")
-    except Exception as e:
-        print(f"An error occurred while converting '{pdf_file}' to PNG: {e}")
-        sys.exit(1)
-
-def find_lowest_black_pixel(image_path):
-    """
-    Finds the y-coordinate of the lowest black pixel in the image.
-
-    Args:
-        image_path (str): Path to the PNG image.
-
-    Returns:
-        int: Y-coordinate of the lowest black pixel. Returns image height if no black pixels are found.
-    """
-    try:
-        with Image.open(image_path) as img:
-            img = img.convert('L')  # Convert to grayscale
-            width, height = img.size
-            pixels = img.load()
-
-            for y in range(height-1, -1, -1):
-                for x in range(width):
-                    if pixels[x, y] < 10:  # Threshold for black pixel
-                        return y
-            return height  # If no black pixels found
-    except Exception as e:
-        print(f"Error processing image '{image_path}': {e}")
-        sys.exit(1)
-
-def combine_images_with_text(image1_path, image2_path, output_path, text):
-    """
-    Combines two images side by side, aligned based on their lowest black pixels,
-    and adds descriptive text below.
-
-    Args:
-        image1_path (str): Path to the first PNG image.
-        image2_path (str): Path to the second PNG image.
-        output_path (str): Path to save the combined PNG image.
-        text (str): Descriptive text to add below the images.
-    """
-    try:
-        # Open images
-        img1 = Image.open(image1_path).convert("RGBA")
-        img2 = Image.open(image2_path).convert("RGBA")
-
-        # Find lowest black pixels
-        img1_lowest = find_lowest_black_pixel(image1_path)
-        img2_lowest = find_lowest_black_pixel(image2_path)
-
-        # Calculate the y-offsets to align the images based on lowest black pixel
-        img1_offset_y = img1.size[1] - img1_lowest
-        img2_offset_y = img2.size[1] - img2_lowest
-        max_offset = max(img1_offset_y, img2_offset_y)
-
-        # Calculate new image height
-        combined_height = max(img1.size[1] + (max_offset - img1_offset_y),
-                             img2.size[1] + (max_offset - img2_offset_y)) + 100  # Extra space for text
-
-        # Calculate new image width
-        combined_width = img1.size[0] + img2.size[0] + 50  # Space between images
-
-        # Create a new blank image
-        combined_img = Image.new('RGBA', (combined_width, combined_height), 'white')
-
-        # Paste img1
-        paste_x1 = 0
-        paste_y1 = combined_height - (img1.size[1] + (max_offset - img1_offset_y)) - 100  # Leave space for text
-        combined_img.paste(img1, (paste_x1, paste_y1), img1)
-
-        # Paste img2
-        paste_x2 = img1.size[0] + 50  # 50 pixels space between images
-        paste_y2 = combined_height - (img2.size[1] + (max_offset - img2_offset_y)) - 100
-        combined_img.paste(img2, (paste_x2, paste_y2), img2)
-
-        # Add text
-        draw = ImageDraw.Draw(combined_img)
-        try:
-            # Try to use a TrueType font
-            font = ImageFont.truetype("arial.ttf", 24)
-        except IOError:
-            # If the font is not found, use the default font
-            font = ImageFont.load_default()
-
-        text_width, text_height = draw.textsize(text, font=font)
-        text_position = ((combined_width - text_width) // 2, combined_height - 80)  # 80 pixels from bottom
-        draw.text(text_position, text, fill="black", font=font)
-
-        # Save the combined image
-        combined_img = combined_img.convert("RGB")  # Remove alpha for saving as JPEG or PNG
-        combined_img.save(output_path)
-        print(f"Combined image saved as '{output_path}'.\n")
-    except Exception as e:
-        print(f"Error combining images: {e}")
-        sys.exit(1)
-
-def delete_existing_output_files(scale_types):
-    """
-    Deletes existing output files based on the scale types.
-
-    Args:
-        scale_types (list): List of scale types.
-    """
-    existing_files = []
-    for scale_type in scale_types:
-        base = f"{scale_type}_scale"
-        existing_files.extend([
-            f"{base}.ly",
-            f"{base}.pdf",
-            f"{base}.midi",
-            f"{base}.png"
-        ])
-    # Add combined image files
-    existing_files.append("combined_scales.png")
-    delete_existing_files(existing_files)
 
 if __name__ == "__main__":
     # User-defined variables
@@ -379,47 +227,16 @@ if __name__ == "__main__":
     # Prepare list of scale types to generate
     scales_to_generate = SCALE_TYPES
 
+    # Define the output filenames
+    ly_filename = "combined_scales.ly"
+    pdf_filename = "combined_scales.pdf"
+    midi_filename = "combined_scales.midi"
+
     # Delete existing output files
-    delete_existing_output_files(scales_to_generate)
+    delete_existing_files([ly_filename, pdf_filename, midi_filename])
 
-    # Generate, compile, and convert each scale
-    for scale_type in scales_to_generate:
-        base_filename = f"{scale_type}_scale"
-        ly_filename = f"{base_filename}.ly"
-        # Generate the LilyPond file
-        print(f"Generating {scale_type.replace('_', ' ').title()} Scale...")
-        base = generate_lilypond(ly_filename, scale_type, key, octaves)
-        
-        # Convert the generated PDF to PNG
-        pdf_filename = f"{base}.pdf"
-        png_filename = f"{base}.png"
+    # Generate and compile the combined LilyPond file
+    print("Generating combined scales...")
+    generate_lilypond_combined(ly_filename, key, scales_to_generate, octaves)
 
-        # Choose conversion method: ImageMagick or pdf2image
-        # Uncomment one of the following lines based on your preference
-
-        # Using ImageMagick's convert
-        convert_pdf_to_png(pdf_filename, png_filename)
-
-        # Using pdf2image (comment out if using ImageMagick)
-        # convert_pdf_to_png_using_pdf2image(pdf_filename, png_filename)
-
-    # Combine Major and Harmonic Minor scales into a single image with description
-    combined_image_path = "combined_scales.png"
-    major_png = "major_scale.png"
-    harmonic_minor_png = "harmonic_minor_scale.png"
-
-    # Check if both PNG files exist
-    if not (os.path.exists(major_png) and os.path.exists(harmonic_minor_png)):
-        print(f"Error: Required PNG files '{major_png}' and/or '{harmonic_minor_png}' not found.")
-        sys.exit(1)
-
-    # Define descriptive text
-    description_text = (
-        "Comparison of Major Scale and Harmonic Minor Scale\n"
-        "The Major scale has a bright and happy sound, while the Harmonic Minor scale introduces a distinctive, exotic flavor due to its augmented second."
-    )
-
-    # Combine the images with text
-    combine_images_with_text(major_png, harmonic_minor_png, combined_image_path, description_text)
-
-    print("All scales have been generated, compiled, converted, and combined successfully.")
+    print("All scales have been generated and compiled successfully.")
