@@ -332,10 +332,12 @@ def generate_and_compile_scales(key, octaves):
             scale_label = f"{scale_key.capitalize()} {st.capitalize()} Scale"
 
             # Build the snippet for this scale
-            scale_score = f"""
-\\markup \\column {{
-  \\center-column {{
-    \\bold "{scale_label}"
+            scale_score = scale_score = f"""
+\\markup {{
+  \\column {{
+    \\center-column {{
+      \\bold "{scale_label}"
+    }}
   }}
 }}
 
@@ -346,10 +348,11 @@ def generate_and_compile_scales(key, octaves):
 
     \\relative {relative_pitch} {{
       \\time 4/4
-
+      \\key d \\major
       {scale_notes}
     }}
   }}
+
   \\layout {{
     indent = 0
     ragged-right = ##t
@@ -357,6 +360,7 @@ def generate_and_compile_scales(key, octaves):
   \\midi {{ }}
 }}
 """
+
             lilypond_content += scale_score + "\n"
 
         # Write the .ly file
