@@ -1,5 +1,4 @@
-
-\version "2.22.0"  % Specify the LilyPond version
+\version "2.24.4"  % Specify the LilyPond version
 
 \header {
   title = "Practice Scales"
@@ -16,20 +15,19 @@
   line-width = 16\cm  % Adjust line width as needed
 }
 
-
 \markup \column {
   \center-column {
-    \bold "Major Scale in C (Major)"
+    \bold "Major Scale in A (Major)"
   }
 }
 
 \score {
   \new Staff {
-    \relative c' {
-      \key c \major
+    \relative a' {
+      \key a \major
       \time 4/4
 
-      c4 d4 e4 f4 g4 a4 b4 c4 d4 e4 f4 g4 a4 b4 c4 b4 a4 g4 f4 e4 d4 c4 b4 a4 g4 f4 e4 d4 c4
+      a4 b4 cis4 d4 e4 fis4 gis4 a4 b4 cis4 d4 e4 fis4 gis4 a4 gis4 fis4 e4 d4 cis4 b4 a4 gis4 fis4 e4 d4 cis4 b4 a4
     }
   }
 
@@ -40,20 +38,19 @@
   \midi { }
 }
 
-
 \markup \column {
   \center-column {
-    \bold "Minor Scale in A (Minor)"
+    \bold "Minor Scale in F# (Minor)"
   }
 }
 
 \score {
   \new Staff {
-    \relative a' {
-      \key c \major
+    \relative f#' {
+      \key f# \minor
       \time 4/4
 
-      a4 b4 c4 d4 e4 f4 g4 a4 b4 c4 d4 e4 f4 g4 a4 g4 f4 e4 d4 c4 b4 a4 g4 f4 e4 d4 c4 b4 a4
+      fis4 gis4 a4 b4 cis4 d4 e4 fis4 gis4 a4 b4 cis4 d4 e4 fis4 e4 d4 cis4 b4 a4 gis4 fis4 e4 d4 cis4 b4 a4 gis4 fis4
     }
   }
 
