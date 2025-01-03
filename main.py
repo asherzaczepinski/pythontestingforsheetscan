@@ -1,14 +1,3 @@
-"""
-This script generates a single LilyPond (.ly) file containing multiple specified scales.
-It automatically compiles the LilyPond file into a centered PDF and a MIDI file
-using the LilyPond command-line tool. Users can specify the key and number of octaves.
-Existing output files are deleted before generating new ones to ensure consistency.
-
-UPDATED: We now force all accidentals to appear explicitly.
-Key signatures have been removed, and scale names have been simplified.
-Additionally, descending scales now exclusively use sharps for accidentals.
-"""
-
 import subprocess
 import sys
 import os
@@ -34,10 +23,8 @@ def generate_and_compile_scales(key, octaves):
     }
 
     # Define note orders for sharp and flat contexts
-    NOTE_ORDER_SHARP = ['c', 'c#', 'd', 'd#', 'e', 'f',
-                        'f#', 'g', 'g#', 'a', 'a#', 'b']
-    NOTE_ORDER_FLAT = ['c', 'db', 'd', 'eb', 'e', 'f',
-                       'gb', 'g', 'ab', 'a', 'bb', 'b']
+    NOTE_ORDER_SHARP = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b']
+    NOTE_ORDER_FLAT = ['c', 'db', 'd', 'eb', 'e', 'f', 'gb', 'g', 'ab', 'a', 'bb', 'b']
 
     # Define flat keys for reference
     FLAT_KEYS = ['f', 'bb', 'eb', 'ab', 'db', 'gb', 'cb']
@@ -59,11 +46,9 @@ def generate_and_compile_scales(key, octaves):
             str: The LilyPond-compatible note name (e.g., 'fis', 'ees').
         """
         mapping = {
-            'c#': 'cis',  'd#': 'dis',  'f#': 'fis',  'g#': 'gis',
-            'a#': 'ais',  'cb': 'ces',  'db': 'des',  'eb': 'ees',
-            'fb': 'fes',  'gb': 'ges',  'ab': 'aes',  'bb': 'bes',
-            'e#': 'eis',  'b#': 'bis',  # Added E# and B# for completeness
-            # You can add double sharps/flats if needed
+            'c#': 'cis',  'd#': 'dis',  'f#': 'fis',  'g#': 'gis',  'a#': 'ais',
+            'cb': 'ces',  'db': 'des',  'eb': 'ees',  'fb': 'fes',  'gb': 'ges',
+            'ab': 'aes',  'bb': 'bes',  'e#': 'eis',  'b#': 'bis'  # E# and B# for completeness
         }
         note_lower = note.lower()
         return mapping.get(note_lower, note_lower)
@@ -81,11 +66,9 @@ def generate_and_compile_scales(key, octaves):
         """
         sharp_mapping = {
             'c#': 'cis',  'd#': 'dis',  'f#': 'fis',  'g#': 'gis',
-            'a#': 'ais',
-            'cb': 'b',    'db': 'cis',  'eb': 'dis',  'fb': 'e',
-            'gb': 'fis',  'ab': 'gis',  'bb': 'ais',
-            'e#': 'eis',  'b#': 'bis',  # Added E# and B# for completeness
-            # Add more mappings if needed
+            'a#': 'ais',  'cb': 'b',    'db': 'cis',  'eb': 'dis',
+            'fb': 'e',    'gb': 'fis',  'ab': 'gis',  'bb': 'ais',
+            'e#': 'eis',  'b#': 'bis'
         }
         note_lower = note.lower()
         return sharp_mapping.get(note_lower, convert_to_lilypond_note(note_lower))
@@ -101,15 +84,12 @@ def generate_and_compile_scales(key, octaves):
         Returns:
             str: Something like "fis'" or "ees'"
         """
-        # Extract the letter + accidental portion (e.g., 'f#')
         match = re.match(r'^([a-gA-G][b#]?)', note)
         if match:
-            base_note = match.group(1).lower()  # e.g., 'f#'
-            base_note_lily = convert_to_lilypond_note(base_note)  # e.g., 'fis'
-            return base_note_lily + "'"          # e.g., 'fis' + "'"
-        else:
-            # Default to middle c if we can't parse
-            return "c'"
+            base_note = match.group(1).lower()
+            base_note_lily = convert_to_lilypond_note(base_note)
+            return base_note_lily + "'"
+        return "c'"
 
     ############################################################################
     # 2. Creating the scale notes (ascending + descending)                     #
@@ -126,26 +106,16 @@ def generate_and_compile_scales(key, octaves):
         Returns:
             int: The index of the note in the note_order list.
         """
-        # Map some common enharmonics to their sharps
         enharmonic = {
-            'cb': 'b',
-            'fb': 'e',
-            'db': 'c#',
-            'eb': 'd#',
-            'gb': 'f#',
-            'ab': 'g#',
-            'bb': 'a#',
-            'e#': 'f',   # E# is enharmonic to F
-            'b#': 'c',   # B# is enharmonic to C
+            'cb': 'b', 'fb': 'e', 'db': 'c#', 'eb': 'd#', 'gb': 'f#', 'ab': 'g#', 'bb': 'a#',
+            'e#': 'f', 'b#': 'c'
         }
         n_lower = note.lower()
         if n_lower in note_order:
             return note_order.index(n_lower)
         elif n_lower in enharmonic and enharmonic[n_lower] in note_order:
             return note_order.index(enharmonic[n_lower])
-        else:
-            print(f"Warning: Note '{note}' not recognized. Defaulting to 'c'.")
-            return note_order.index('c')
+        return note_order.index('c')
 
     def next_note(current_note, interval, note_order):
         """
@@ -184,12 +154,10 @@ def generate_and_compile_scales(key, octaves):
         current_note = key.lower()
         scale = [current_note]
 
-        # Build one octave ascending
         for interval in intervals:
             current_note = next_note(current_note, interval, note_order)
             scale.append(current_note)
 
-        # Repeat for the specified number of octaves
         full_scale = scale.copy()
         for _ in range(1, octaves):
             starting_note = scale[-1]
@@ -197,19 +165,12 @@ def generate_and_compile_scales(key, octaves):
                 starting_note = next_note(starting_note, interval, note_order)
                 full_scale.append(starting_note)
 
-        # Descending scale (exclude last note to avoid duplication)
         descending_scale = full_scale[::-1][1:]
 
-        # Convert ascending_scale to LilyPond note names
         lilypond_notes_asc = [convert_to_lilypond_note(n) for n in full_scale]
-
-        # Convert descending_scale to LilyPond note names using sharps
         lilypond_notes_desc = [convert_to_lilypond_note_sharp(n) for n in descending_scale]
 
-        # Combine ascending and descending scales
         combined_scale = lilypond_notes_asc + lilypond_notes_desc
-
-        # Give each note a quarter duration
         notes_with_rhythm = ' '.join(f"{n}4" for n in combined_scale)
         return notes_with_rhythm
 
@@ -231,17 +192,11 @@ def generate_and_compile_scales(key, octaves):
         Returns the relative minor for a given major key.
         """
         relative_minors = {
-            'c': 'a',   'g': 'e',   'd': 'b',   'a': 'f#',
-            'e': 'c#',  'b': 'g#',  'f#': 'd#', 'c#': 'a#',
-            'f': 'd',   'bb': 'g',  'eb': 'c',  'ab': 'f',
-            'db': 'bb', 'gb': 'eb', 'cb': 'ab'
+            'c': 'a', 'g': 'e', 'd': 'b', 'a': 'f#', 'e': 'c#', 'b': 'g#', 'f#': 'd#', 'c#': 'a#',
+            'f': 'd', 'bb': 'g', 'eb': 'c', 'ab': 'f', 'db': 'bb', 'gb': 'eb', 'cb': 'ab'
         }
         mk_lower = major_key.lower()
-        if mk_lower in relative_minors:
-            return relative_minors[mk_lower]
-        else:
-            print(f"Warning: No relative minor for '{major_key}'. Defaulting to 'a'.")
-            return 'a'
+        return relative_minors.get(mk_lower, 'a')
 
     ############################################################################
     # 4. File cleanup, LilyPond version retrieval, compile steps              #
@@ -264,9 +219,7 @@ def generate_and_compile_scales(key, octaves):
         Checks the installed LilyPond version, or exits if not found.
         """
         try:
-            result = subprocess.run(['lilypond', '--version'],
-                                    capture_output=True, text=True, check=True)
-            # Example output: "GNU LilyPond 2.24.0"
+            result = subprocess.run(['lilypond', '--version'], capture_output=True, text=True, check=True)
             match = re.search(r'LilyPond\s+(\d+\.\d+\.\d+)', result.stdout)
             if match:
                 return match.group(1)
@@ -287,7 +240,6 @@ def generate_and_compile_scales(key, octaves):
         """
         Generates a LilyPond .ly file with the desired scales, then compiles it.
         """
-        # Global header for the LilyPond file
         global_header = f"""
 \\version "{lilypond_version}"  % Force LilyPond to treat code with this version
 
@@ -309,7 +261,6 @@ def generate_and_compile_scales(key, octaves):
 
         lilypond_content = global_header + "\n"
 
-        # For each scale type (major / minor) ...
         for st in scale_types:
             if st == "minor":
                 rel_minor_key = find_relative_minor(main_key)
@@ -319,25 +270,15 @@ def generate_and_compile_scales(key, octaves):
                 scale_key = main_key.lower()
                 mode = "major"
 
-            # Decide the note-order (sharp vs flat)
             this_note_order = determine_note_order(scale_key)
-
-            # Generate the actual scale notes
             scale_notes = generate_scale_notes(scale_key, st, octaves, this_note_order)
-
-            # Figure out the correct \relative pitch
             relative_pitch = convert_to_lilypond_relative(scale_key)
-
-            # Build the simplified scale label
             scale_label = f"{scale_key.capitalize()} {st.capitalize()} Scale"
 
-            # Build the snippet for this scale
-            scale_score = scale_score = f"""
-\\markup {{
-  \\column {{
-    \\center-column {{
-      \\bold "{scale_label}"
-    }}
+            scale_score = f"""
+\\markup \\column {{
+  \\center-column {{
+    \\bold "{scale_label}"
   }}
 }}
 
@@ -346,13 +287,12 @@ def generate_and_compile_scales(key, octaves):
     % Force all accidentals to show (for any sharp or flat).
     \\override Accidental #'force-accidental = ##t
 
+    \\override Staff.TimeSignature #'transparent = ##t
+
     \\relative {relative_pitch} {{
-      \\time 4/4
-      \\key d \\major
       {scale_notes}
     }}
   }}
-
   \\layout {{
     indent = 0
     ragged-right = ##t
@@ -360,10 +300,8 @@ def generate_and_compile_scales(key, octaves):
   \\midi {{ }}
 }}
 """
-
             lilypond_content += scale_score + "\n"
 
-        # Write the .ly file
         try:
             with open(filename, 'w') as f:
                 f.write(lilypond_content)
@@ -372,7 +310,6 @@ def generate_and_compile_scales(key, octaves):
             print(f"Error writing to '{filename}': {e}")
             sys.exit(1)
 
-        # Invoke LilyPond to compile
         try:
             print(f"Compiling the LilyPond file '{filename}'...")
             subprocess.run(['lilypond', filename], check=True)
@@ -387,23 +324,16 @@ def generate_and_compile_scales(key, octaves):
 
     # ------------------------------- MAIN LOGIC -------------------------------
 
-    # 1. Validate octaves
     if not isinstance(octaves, int) or not (1 <= octaves <= 4):
         print("Error: Number of octaves must be an integer between 1 and 4.")
         sys.exit(1)
 
-    # 2. Define output filenames
     ly_filename = "combined_practice.ly"
     pdf_filename = "combined_practice.pdf"
     midi_filename = "combined_practice.midi"
 
-    # 3. Delete any existing versions of these files
     delete_existing_files([ly_filename, pdf_filename, midi_filename])
-
-    # 4. Get LilyPond version
     lilypond_version = get_lilypond_version()
-
-    # 5. Generate and compile
     print("Generating scales in LilyPond...")
     generate_lilypond_combined(ly_filename, key, SCALE_TYPES, octaves, lilypond_version)
     print("All scales generated and compiled successfully.")

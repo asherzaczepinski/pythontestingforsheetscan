@@ -17,11 +17,9 @@
 }
 
 
-\markup {
-  \column {
-    \center-column {
-      \bold "F# Major Scale"
-    }
+\markup \column {
+  \center-column {
+    \bold "F# Major Scale"
   }
 }
 
@@ -30,13 +28,12 @@
     % Force all accidentals to show (for any sharp or flat).
     \override Accidental #'force-accidental = ##t
 
+    \override Staff.TimeSignature #'transparent = ##t
+
     \relative fis' {
-      \time 4/4
-      \key d \major
       fis4 gis4 ais4 b4 cis4 dis4 f4 fis4 gis4 ais4 b4 cis4 dis4 f4 fis4 f4 dis4 cis4 b4 ais4 gis4 fis4 f4 dis4 cis4 b4 ais4 gis4 fis4
     }
   }
-
   \layout {
     indent = 0
     ragged-right = ##t
@@ -45,11 +42,9 @@
 }
 
 
-\markup {
-  \column {
-    \center-column {
-      \bold "D# Minor Scale"
-    }
+\markup \column {
+  \center-column {
+    \bold "D# Minor Scale"
   }
 }
 
@@ -58,13 +53,12 @@
     % Force all accidentals to show (for any sharp or flat).
     \override Accidental #'force-accidental = ##t
 
+    \override Staff.TimeSignature #'transparent = ##t
+
     \relative dis' {
-      \time 4/4
-      \key d \major
       dis4 f4 fis4 gis4 ais4 b4 cis4 dis4 f4 fis4 gis4 ais4 b4 cis4 dis4 cis4 b4 ais4 gis4 fis4 f4 dis4 cis4 b4 ais4 gis4 fis4 f4 dis4
     }
   }
-
   \layout {
     indent = 0
     ragged-right = ##t
