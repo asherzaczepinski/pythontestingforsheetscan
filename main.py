@@ -3,6 +3,8 @@ This script generates a single LilyPond (.ly) file containing multiple specified
 It automatically compiles the LilyPond file into a centered PDF and a MIDI file
 using the LilyPond command-line tool. Users can specify the key and number of octaves.
 Existing output files are deleted before generating new ones to ensure consistency.
+
+UPDATED: We now force all accidentals to appear explicitly.
 """
 
 import subprocess
@@ -317,6 +319,9 @@ def generate_and_compile_scales(key, octaves):
 
 \\score {{
   \\new Staff {{
+    % Force all accidentals to show (for any sharp or flat).
+    \\override Accidental #'force-accidental = ##t
+
     \\relative {relative_pitch} {{
       {key_signature}
       \\time 4/4
@@ -380,6 +385,6 @@ def generate_and_compile_scales(key, octaves):
 
 # Example usage (uncomment to run directly):
 if __name__ == "__main__":
-    key_input = "c"   # Try 'a', 'c', 'f#', 'eb', etc.
+    key_input = "f#"   # Try 'a', 'c', 'f#', 'eb', etc.
     octaves_input = 2  # 1 to 4
     generate_and_compile_scales(key_input, octaves_input)
