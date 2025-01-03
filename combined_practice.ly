@@ -28,6 +28,8 @@
     % Force all accidentals to show (for any sharp or flat).
     \override Accidental #'force-accidental = ##t
 
+    \key f# \major  % Add key signature
+
     \relative fis' {
       \time 4/4
 
@@ -52,6 +54,8 @@
   \new Staff {
     % Force all accidentals to show (for any sharp or flat).
     \override Accidental #'force-accidental = ##t
+
+    \key d# \minor  % Add key signature
 
     \relative dis' {
       \time 4/4
