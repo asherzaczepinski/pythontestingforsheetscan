@@ -2,7 +2,7 @@
 \version "2.22.0"  % Specify the LilyPond version
 
 \header {
-  title = "Practice"
+  title = "Practice Scales"
   composer = "Traditional"
 }
 
@@ -19,7 +19,7 @@
 
 \markup \column {
   \center-column {
-    \bold "Major Scale in C"
+    \bold "Major Scale in C (Major)"
   }
 }
 
@@ -43,41 +43,17 @@
 
 \markup \column {
   \center-column {
-    \bold "Minor Scale in C"
+    \bold "Minor Scale in A (Minor)"
   }
 }
 
 \score {
   \new Staff {
-    \relative c' {
-      \key c \minor
+    \relative a' {
+      \key c \major
       \time 4/4
 
-      c4 d4 d#4 f4 g4 g#4 a#4 c4 d4 d#4 f4 g4 g#4 a#4 c4 a#4 g#4 g4 f4 d#4 d4 c4 a#4 g#4 g4 f4 d#4 d4 c4
-    }
-  }
-
-  \layout {
-    indent = 0  % Remove indentation to center the music
-    ragged-right = ##t  % Allow ragged right margins
-  }
-  \midi { }
-}
-
-
-\markup \column {
-  \center-column {
-    \bold "Harmonic Minor Scale in C"
-  }
-}
-
-\score {
-  \new Staff {
-    \relative c' {
-      \key c \minor
-      \time 4/4
-
-      c4 d4 d#4 f4 g4 g#4 b4 c4 d4 d#4 f4 g4 g#4 b4 c4 b4 g#4 g4 f4 d#4 d4 c4 b4 g#4 g4 f4 d#4 d4 c4
+      a4 b4 c4 d4 e4 f4 g4 a4 b4 c4 d4 e4 f4 g4 a4 g4 f4 e4 d4 c4 b4 a4 g4 f4 e4 d4 c4 b4 a4
     }
   }
 

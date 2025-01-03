@@ -1,9 +1,8 @@
 """
 This script generates a single LilyPond (.ly) file containing multiple specified scales.
 It automatically compiles the LilyPond file into a centered PDF and a MIDI file
-using the LilyPond command-line tool. Users can specify the key, scale types,
-and number of octaves. Existing output files are deleted before generating new
-ones to ensure consistency.
+using the LilyPond command-line tool. Users can specify the key and number of octaves.
+Existing output files are deleted before generating new ones to ensure consistency.
 """
 
 import subprocess
@@ -13,97 +12,118 @@ import os
 # Define the scale intervals for different scale types
 SCALE_INTERVALS = {
     "major": [2, 2, 1, 2, 2, 2, 1],
-    "minor": [2, 1, 2, 2, 1, 2, 2],          # Natural Minor
-    "harmonic_minor": [2, 1, 2, 2, 1, 3, 1] # Harmonic Minor
+    "minor": [2, 1, 2, 2, 1, 2, 2]  # Natural Minor Scale Intervals
 }
 
-# Define all possible notes including sharps and flats
-NOTE_ORDER = ['c', 'c#', 'd', 'd#', 'e', 'f',
-             'f#', 'g', 'g#', 'a', 'a#', 'b']
+# Define note orders for sharp and flat contexts
+NOTE_ORDER_SHARP = ['c', 'c#', 'd', 'd#', 'e', 'f',
+                   'f#', 'g', 'g#', 'a', 'a#', 'b']
+
+NOTE_ORDER_FLAT = ['c', 'db', 'd', 'eb', 'e', 'f',
+                  'gb', 'g', 'ab', 'a', 'bb', 'b']
+
+# Define flat keys for reference
+FLAT_KEYS = ['f', 'bb', 'eb', 'ab', 'db', 'gb', 'cb']
 
 # List of scale types to generate
-SCALE_TYPES = ["major", "minor", "harmonic_minor"]
+SCALE_TYPES = ["major", "minor"]  # Included "minor" to generate minor scales
 
-def get_note_index(note):
+def get_note_index(note, note_order):
     """
-    Retrieves the index of the note in the NOTE_ORDER list.
+    Retrieves the index of the note in the provided note_order list.
     Handles both sharps (#) and flats (b).
+
+    Args:
+        note (str): The note to find (e.g., 'c', 'd#', 'eb').
+        note_order (list): The list of notes to search within.
+
+    Returns:
+        int: The index of the note in the note_order list.
     """
     enharmonic = {
+        'cb': 'b',
+        'fb': 'e',
         'db': 'c#',
         'eb': 'd#',
         'gb': 'f#',
         'ab': 'g#',
-        'bb': 'a#',
-        'cb': 'b',
-        'fb': 'e'
+        'bb': 'a#'
     }
     note = note.lower()
-    if note in NOTE_ORDER:
-        return NOTE_ORDER.index(note)
-    elif note in enharmonic:
-        return NOTE_ORDER.index(enharmonic[note])
+    if note in note_order:
+        return note_order.index(note)
+    elif note in enharmonic and enharmonic[note] in note_order:
+        return note_order.index(enharmonic[note])
     else:
         print(f"Warning: Note '{note}' is not recognized. Defaulting to 'c'.")
-        return NOTE_ORDER.index('c')
+        return note_order.index('c')
 
-def next_note(current_note, interval):
+def next_note(current_note, interval, note_order):
     """
-    Calculates the next note in the scale based on the interval.
-    """
-    index = get_note_index(current_note)
-    next_index = (index + interval) % len(NOTE_ORDER)
-    return NOTE_ORDER[next_index]
+    Calculates the next note in the scale based on the interval and note_order.
 
-def generate_scale_notes(key, scale_type, octaves):
+    Args:
+        current_note (str): The current note.
+        interval (int): The interval to move to the next note.
+        note_order (list): The list of notes to use (sharp or flat).
+
+    Returns:
+        str: The next note in the scale.
     """
-    Generates a scale based on the key, scale type, and number of octaves.
-    
+    index = get_note_index(current_note, note_order)
+    next_index = (index + interval) % len(note_order)
+    return note_order[next_index]
+
+def generate_scale_notes(key, scale_type, octaves, note_order):
+    """
+    Generates a scale based on the key, scale type, number of octaves, and note_order.
+
     Args:
         key (str): The key for the scale (e.g., 'c', 'g#', 'eb').
-        scale_type (str): The type of scale ('major', 'minor', 'harmonic_minor').
+        scale_type (str): The type of scale ('major', 'minor').
         octaves (int): Number of octaves (1 to 4).
-    
+        note_order (list): The list of notes to use (sharp or flat).
+
     Returns:
         str: LilyPond-formatted notes representing the scale.
     """
     if scale_type not in SCALE_INTERVALS:
         print(f"Error: Scale type '{scale_type}' is not supported.")
         sys.exit(1)
-    
+
     intervals = SCALE_INTERVALS[scale_type]
     current_note = key.lower()
     scale = [current_note]
-    
+
     # Generate one octave first
     for interval in intervals:
-        current_note = next_note(current_note, interval)
+        current_note = next_note(current_note, interval, note_order)
         scale.append(current_note)
-    
+
     # Repeat the scale for the specified number of octaves
     full_scale = scale.copy()
     for _ in range(1, octaves):
         # Start from the last note of the previous scale
         starting_note = scale[-1]
         for interval in intervals:
-            starting_note = next_note(starting_note, interval)
+            starting_note = next_note(starting_note, interval, note_order)
             full_scale.append(starting_note)
-    
+
     # For descending scale, exclude the last note to avoid repetition
     descending_scale = full_scale[::-1][1:]
-    
+
     # Combine ascending and descending scales
     combined_scale = full_scale + descending_scale
-    
+
     # Assign rhythmic values (quarter notes)
     notes_with_rhythm = ' '.join([f"{note}4" for note in combined_scale])
-    
+
     return notes_with_rhythm
 
 def delete_existing_files(filenames):
     """
     Deletes existing files if they exist.
-    
+
     Args:
         filenames (list): List of filenames to delete.
     """
@@ -116,22 +136,77 @@ def delete_existing_files(filenames):
                 print(f"Error deleting file '{filename}': {e}")
                 sys.exit(1)
 
+def determine_note_order(key):
+    """
+    Determines whether to use sharp or flat note order based on the key.
+
+    Args:
+        key (str): The key for the scale.
+
+    Returns:
+        list: The appropriate note order list (sharp or flat).
+    """
+    key = key.lower()
+    if key in FLAT_KEYS or 'b' in key:
+        return NOTE_ORDER_FLAT
+    else:
+        return NOTE_ORDER_SHARP
+
+def find_relative_minor(key):
+    """
+    Finds the relative minor key for a given major key.
+
+    Args:
+        key (str): The major key (e.g., 'c', 'g#', 'eb').
+
+    Returns:
+        str: The relative minor key.
+    """
+    # Define all possible keys with their relative minors
+    relative_minors = {
+        'c': 'a',
+        'g': 'e',
+        'd': 'b',
+        'a': 'f#',
+        'e': 'c#',
+        'b': 'g#',
+        'f#': 'd#',
+        'c#': 'a#',
+        'f': 'd',
+        'bb': 'g',
+        'eb': 'c',
+        'ab': 'f',
+        'db': 'bb',
+        'gb': 'eb',
+        'cb': 'ab'
+    }
+
+    key_lower = key.lower()
+    if key_lower in relative_minors:
+        return relative_minors[key_lower]
+    else:
+        print(f"Warning: Relative minor for key '{key}' not found. Defaulting to 'a'.")
+        return 'a'  # Default relative minor
+
 def generate_lilypond_combined(filename, key, scale_types, octaves):
     """
     Generates a single LilyPond file containing multiple scales.
-    
+
     Args:
         filename (str): The filename for the LilyPond (.ly) file.
         key (str): The key for the scales.
         scale_types (list): List of scale types to include.
         octaves (int): Number of octaves.
     """
+    # Determine the appropriate note order
+    note_order = determine_note_order(key)
+
     # Define the header with global metadata
     global_header = f"""
 \\version "2.22.0"  % Specify the LilyPond version
 
 \\header {{
-  title = "Practice"
+  title = "Practice Scales"
   composer = "Traditional"
 }}
 
@@ -151,26 +226,32 @@ def generate_lilypond_combined(filename, key, scale_types, octaves):
 
     # Iterate over each scale type and append its section
     for scale_type in scale_types:
-        # Generate scale notes
-        notes = generate_scale_notes(key, scale_type, octaves)
-
-        # Determine relative pitch based on the key
-        # Adjust octave based on key to ensure proper pitch
-        # For simplicity, start at c' if key is c, g' if key is g, etc.
-        # If key has sharps/flats, include them in the relative pitch
-        relative_pitch = f"{key.lower()}'"
-
-        # Define the key signature
-        if scale_type in ["minor", "harmonic_minor"]:
-            key_signature = f"\\key {key.lower()} \\minor"
+        if scale_type == "minor":
+            # Find the relative minor key
+            relative_minor_key = find_relative_minor(key)
+            scale_key = relative_minor_key
+            key_signature = f"\\key {key.lower()} \\major"  # Major key signature for relative minor
+            mode = "Minor"
         else:
-            key_signature = f"\\key {key.lower()} \\major"
+            # For major scales
+            scale_key = key.lower()
+            key_signature = f"\\key {scale_key} \\major"
+            mode = "Major"
+
+        # Determine the appropriate note order for the scale
+        scale_note_order = determine_note_order(scale_key)
+
+        # Generate scale notes with the correct note order
+        notes = generate_scale_notes(scale_key, scale_type, octaves, scale_note_order)
+
+        # Determine relative pitch based on the scale key
+        relative_pitch = f"{scale_key}'"
 
         # Define the score for the current scale
         scale_score = f"""
 \\markup \\column {{
   \\center-column {{
-    \\bold "{scale_type.replace('_', ' ').title()} Scale in {key.capitalize()}"
+    \\bold "{scale_type.replace('_', ' ').title()} Scale in {scale_key.capitalize()} ({mode})"
   }}
 }}
 
