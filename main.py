@@ -371,6 +371,6 @@ def generate_and_compile_scales(key, octaves):
 
 # Example usage (uncomment to run directly):
 if __name__ == "__main__":
-    key_input = "c"   # Try 'a', 'c', 'f#', 'eb', etc.
+    key_input = "f#"   # Try 'a', 'c', 'f#', 'eb', etc.
     octaves_input = 2  # 1 to 4
     generate_and_compile_scales(key_input, octaves_input)
