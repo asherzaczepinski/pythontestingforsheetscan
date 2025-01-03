@@ -1,3 +1,12 @@
+"""
+This script generates a single LilyPond (.ly) file containing multiple specified scales.
+It automatically compiles the LilyPond file into a centered PDF and a MIDI file
+using the LilyPond command-line tool. Users can specify the key and number of octaves.
+Existing output files are deleted before generating new ones to ensure consistency.
+
+UPDATED: We now force all accidentals to appear explicitly.
+"""
+
 import subprocess
 import sys
 import os
@@ -135,35 +144,18 @@ def generate_and_compile_scales(key, octaves):
         next_index = (index + interval) % len(note_order)
         return note_order[next_index]
 
-    #
-    #  --- ADD THIS HELPER FUNCTION TO INSERT MARKUP (e.g., \sharp or \flat) ---
-    #
-    def add_text_markup_accidental(lilypond_note):
-        """
-        Given a LilyPond note name like 'fis' or 'des',
-        return something like 'fis4^\\markup{\\sharp}' or 'des4^\\markup{\\flat}'.
-        
-        We'll keep the correct pitch spelling so LilyPond knows the correct sound,
-        but also add a text markup *above* the note indicating # or b.
-        """
-        # 'is' usually denotes a sharp in LilyPond, e.g. fis -> F#
-        # 'es' usually denotes a flat, e.g. bes -> B♭, aes -> A♭, etc.
-        # We can do a simple check:
-        if lilypond_note.endswith("is"):
-            # If the note is 'ais', 'fis', 'cis', etc. => add a “\sharp” markup
-            return f"{lilypond_note}4^\\markup{{\\sharp}}"
-        # Many flats in LilyPond end with 'es' (bes, aes, des, ges, ees, etc.)
-        # but keep in mind: 'ces' is B double flat in some contexts, but let's just treat 'es' as flat text
-        elif lilypond_note.endswith("es"):
-            return f"{lilypond_note}4^\\markup{{\\flat}}"
-        else:
-            # A natural or something else:
-            return f"{lilypond_note}4"
-
     def generate_scale_notes(key, scale_type, octaves, note_order):
         """
-        Generates ascending + descending scale notes in LilyPond format,
-        and adds textual markups (\sharp or \flat) if needed.
+        Generates ascending + descending scale notes in LilyPond format.
+
+        Args:
+            key (str): The key (e.g., 'c', 'g#', 'eb').
+            scale_type (str): 'major' or 'minor'.
+            octaves (int): 1-4.
+            note_order (list): Sharps or flats version of the chromatic scale.
+
+        Returns:
+            str: LilyPond-formatted scale notes with quarter durations.
         """
         if scale_type not in SCALE_INTERVALS:
             print(f"Error: Scale type '{scale_type}' not supported.")
@@ -195,9 +187,8 @@ def generate_and_compile_scales(key, octaves):
         # Convert everything to LilyPond note names
         lilypond_notes = [convert_to_lilypond_note(n) for n in combined_scale]
 
-        # Build a single string with each note as quarter + possible markup
-        notes_with_rhythm = ' '.join(add_text_markup_accidental(n) 
-                                     for n in lilypond_notes)
+        # Give each note a quarter duration
+        notes_with_rhythm = ' '.join(f"{n}4" for n in lilypond_notes)
         return notes_with_rhythm
 
     ############################################################################
@@ -328,10 +319,8 @@ def generate_and_compile_scales(key, octaves):
 
 \\score {{
   \\new Staff {{
-    % Force all accidentals to show using LilyPond's built-in accidental
-    % (in addition to the text markup we added manually)
-    \\override Accidental.free-standing-accidental = ##t
-    \\override Accidental.force-accidental = ##t
+    % Force all accidentals to show (for any sharp or flat).
+    \\override Accidental #'force-accidental = ##t
 
     \\relative {relative_pitch} {{
       {key_signature}
