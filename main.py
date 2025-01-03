@@ -5,6 +5,7 @@ using the LilyPond command-line tool. Users can specify the key and number of oc
 Existing output files are deleted before generating new ones to ensure consistency.
 
 UPDATED: We now force all accidentals to appear explicitly.
+Key signatures have been removed, and scale names have been simplified.
 """
 
 import subprocess
@@ -64,20 +65,6 @@ def generate_and_compile_scales(key, octaves):
         }
         note_lower = note.lower()
         return mapping.get(note_lower, note_lower)
-
-    def convert_to_lilypond_key_signature(note, scale_type):
-        """
-        Converts the base note to LilyPond format and appends \major or \minor.
-
-        Args:
-            note (str): The key, e.g. 'f#' or 'eb'
-            scale_type (str): 'major' or 'minor'
-
-        Returns:
-            str: A LilyPond key signature directive, e.g. "\\key fis \\minor"
-        """
-        lilypond_note = convert_to_lilypond_note(note)  # e.g. 'f#' -> 'fis'
-        return f"\\key {lilypond_note} \\{scale_type}"
 
     def convert_to_lilypond_relative(note):
         """
@@ -292,13 +279,10 @@ def generate_and_compile_scales(key, octaves):
             if st == "minor":
                 rel_minor_key = find_relative_minor(main_key)
                 scale_key = rel_minor_key
-                mode = "Minor"
+                mode = "minor"
             else:
                 scale_key = main_key.lower()
-                mode = "Major"
-
-            # Build the \key ... \minor or \major line
-            key_signature = convert_to_lilypond_key_signature(scale_key, st)
+                mode = "major"
 
             # Decide the note-order (sharp vs flat)
             this_note_order = determine_note_order(scale_key)
@@ -309,11 +293,14 @@ def generate_and_compile_scales(key, octaves):
             # Figure out the correct \relative pitch
             relative_pitch = convert_to_lilypond_relative(scale_key)
 
+            # Build the simplified scale label
+            scale_label = f"{scale_key.capitalize()} {st.capitalize()} Scale"
+
             # Build the snippet for this scale
             scale_score = f"""
 \\markup \\column {{
   \\center-column {{
-    \\bold "{st.capitalize()} Scale in {scale_key.capitalize()} ({mode})"
+    \\bold "{scale_label}"
   }}
 }}
 
@@ -323,7 +310,6 @@ def generate_and_compile_scales(key, octaves):
     \\override Accidental #'force-accidental = ##t
 
     \\relative {relative_pitch} {{
-      {key_signature}
       \\time 4/4
 
       {scale_notes}
@@ -385,6 +371,6 @@ def generate_and_compile_scales(key, octaves):
 
 # Example usage (uncomment to run directly):
 if __name__ == "__main__":
-    key_input = "f#"   # Try 'a', 'c', 'f#', 'eb', etc.
+    key_input = "c"   # Try 'a', 'c', 'f#', 'eb', etc.
     octaves_input = 2  # 1 to 4
     generate_and_compile_scales(key_input, octaves_input)

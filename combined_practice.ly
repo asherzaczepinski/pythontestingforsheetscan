@@ -19,7 +19,7 @@
 
 \markup \column {
   \center-column {
-    \bold "Major Scale in F# (Major)"
+    \bold "C Major Scale"
   }
 }
 
@@ -28,11 +28,10 @@
     % Force all accidentals to show (for any sharp or flat).
     \override Accidental #'force-accidental = ##t
 
-    \relative fis' {
-      \key fis \major
+    \relative c' {
       \time 4/4
 
-      fis4 gis4 ais4 b4 cis4 dis4 f4 fis4 gis4 ais4 b4 cis4 dis4 f4 fis4 f4 dis4 cis4 b4 ais4 gis4 fis4 f4 dis4 cis4 b4 ais4 gis4 fis4
+      c4 d4 e4 f4 g4 a4 b4 c4 d4 e4 f4 g4 a4 b4 c4 b4 a4 g4 f4 e4 d4 c4 b4 a4 g4 f4 e4 d4 c4
     }
   }
   \layout {
@@ -45,7 +44,7 @@
 
 \markup \column {
   \center-column {
-    \bold "Minor Scale in D# (Minor)"
+    \bold "A Minor Scale"
   }
 }
 
@@ -54,11 +53,10 @@
     % Force all accidentals to show (for any sharp or flat).
     \override Accidental #'force-accidental = ##t
 
-    \relative dis' {
-      \key dis \minor
+    \relative a' {
       \time 4/4
 
-      dis4 f4 fis4 gis4 ais4 b4 cis4 dis4 f4 fis4 gis4 ais4 b4 cis4 dis4 cis4 b4 ais4 gis4 fis4 f4 dis4 cis4 b4 ais4 gis4 fis4 f4 dis4
+      a4 b4 c4 d4 e4 f4 g4 a4 b4 c4 d4 e4 f4 g4 a4 g4 f4 e4 d4 c4 b4 a4 g4 f4 e4 d4 c4 b4 a4
     }
   }
   \layout {
