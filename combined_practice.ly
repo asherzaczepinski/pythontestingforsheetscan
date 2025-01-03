@@ -2,7 +2,7 @@
 \version "2.22.0"  % Specify the LilyPond version
 
 \header {
-  title = "C Scales"
+  title = "Practice"
   composer = "Traditional"
 }
 

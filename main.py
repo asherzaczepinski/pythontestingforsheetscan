@@ -131,7 +131,7 @@ def generate_lilypond_combined(filename, key, scale_types, octaves):
 \\version "2.22.0"  % Specify the LilyPond version
 
 \\header {{
-  title = "{key.capitalize()} Scales"
+  title = "Practice"
   composer = "Traditional"
 }}
 
@@ -154,9 +154,11 @@ def generate_lilypond_combined(filename, key, scale_types, octaves):
         # Generate scale notes
         notes = generate_scale_notes(key, scale_type, octaves)
 
-        # Determine relative pitch based on number of octaves
-        # Starting at c' for simplicity
-        relative_pitch = "c'"
+        # Determine relative pitch based on the key
+        # Adjust octave based on key to ensure proper pitch
+        # For simplicity, start at c' if key is c, g' if key is g, etc.
+        # If key has sharps/flats, include them in the relative pitch
+        relative_pitch = f"{key.lower()}'"
 
         # Define the key signature
         if scale_type in ["minor", "harmonic_minor"]:
@@ -228,15 +230,15 @@ if __name__ == "__main__":
     scales_to_generate = SCALE_TYPES
 
     # Define the output filenames
-    ly_filename = "combined_scales.ly"
-    pdf_filename = "combined_scales.pdf"
-    midi_filename = "combined_scales.midi"
+    ly_filename = "combined_practice.ly"
+    pdf_filename = "combined_practice.pdf"
+    midi_filename = "combined_practice.midi"
 
     # Delete existing output files
     delete_existing_files([ly_filename, pdf_filename, midi_filename])
 
     # Generate and compile the combined LilyPond file
-    print("Generating combined scales...")
+    print("Generating combined practice scales...")
     generate_lilypond_combined(ly_filename, key, scales_to_generate, octaves)
 
     print("All scales have been generated and compiled successfully.")
