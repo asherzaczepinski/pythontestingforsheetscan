@@ -6,6 +6,7 @@ Existing output files are deleted before generating new ones to ensure consisten
 
 UPDATED: We now force all accidentals to appear explicitly.
 Key signatures have been removed, and scale names have been simplified.
+Additionally, descending scales now exclusively use sharps for accidentals.
 """
 
 import subprocess
@@ -60,11 +61,34 @@ def generate_and_compile_scales(key, octaves):
         mapping = {
             'c#': 'cis',  'd#': 'dis',  'f#': 'fis',  'g#': 'gis',
             'a#': 'ais',  'cb': 'ces',  'db': 'des',  'eb': 'ees',
-            'fb': 'fes',  'gb': 'ges',  'ab': 'aes',  'bb': 'bes'
+            'fb': 'fes',  'gb': 'ges',  'ab': 'aes',  'bb': 'bes',
+            'e#': 'eis',  'b#': 'bis',  # Added E# and B# for completeness
             # You can add double sharps/flats if needed
         }
         note_lower = note.lower()
         return mapping.get(note_lower, note_lower)
+
+    def convert_to_lilypond_note_sharp(note):
+        """
+        Converts a standard note with accidentals to LilyPond-compatible notation,
+        favoring sharps for accidentals.
+
+        Args:
+            note (str): The note to convert (e.g., 'f#', 'eb').
+
+        Returns:
+            str: The LilyPond-compatible note name with sharps (e.g., 'fis', 'dis').
+        """
+        sharp_mapping = {
+            'c#': 'cis',  'd#': 'dis',  'f#': 'fis',  'g#': 'gis',
+            'a#': 'ais',
+            'cb': 'b',    'db': 'cis',  'eb': 'dis',  'fb': 'e',
+            'gb': 'fis',  'ab': 'gis',  'bb': 'ais',
+            'e#': 'eis',  'b#': 'bis',  # Added E# and B# for completeness
+            # Add more mappings if needed
+        }
+        note_lower = note.lower()
+        return sharp_mapping.get(note_lower, convert_to_lilypond_note(note_lower))
 
     def convert_to_lilypond_relative(note):
         """
@@ -98,6 +122,9 @@ def generate_and_compile_scales(key, octaves):
         Args:
             note (str): The note to find (e.g., 'c', 'd#', 'eb').
             note_order (list): The list of notes to search within.
+
+        Returns:
+            int: The index of the note in the note_order list.
         """
         # Map some common enharmonics to their sharps
         enharmonic = {
@@ -107,7 +134,9 @@ def generate_and_compile_scales(key, octaves):
             'eb': 'd#',
             'gb': 'f#',
             'ab': 'g#',
-            'bb': 'a#'
+            'bb': 'a#',
+            'e#': 'f',   # E# is enharmonic to F
+            'b#': 'c',   # B# is enharmonic to C
         }
         n_lower = note.lower()
         if n_lower in note_order:
@@ -126,6 +155,9 @@ def generate_and_compile_scales(key, octaves):
             current_note (str): The current note.
             interval (int): Steps to move in the note_order (e.g., 2 or 1).
             note_order (list): The list of notes to use (sharps or flats).
+
+        Returns:
+            str: The next note in the scale.
         """
         index = get_note_index(current_note, note_order)
         next_index = (index + interval) % len(note_order)
@@ -168,14 +200,17 @@ def generate_and_compile_scales(key, octaves):
         # Descending scale (exclude last note to avoid duplication)
         descending_scale = full_scale[::-1][1:]
 
-        # Combine ascending + descending
-        combined_scale = full_scale + descending_scale
+        # Convert ascending_scale to LilyPond note names
+        lilypond_notes_asc = [convert_to_lilypond_note(n) for n in full_scale]
 
-        # Convert everything to LilyPond note names
-        lilypond_notes = [convert_to_lilypond_note(n) for n in combined_scale]
+        # Convert descending_scale to LilyPond note names using sharps
+        lilypond_notes_desc = [convert_to_lilypond_note_sharp(n) for n in descending_scale]
+
+        # Combine ascending and descending scales
+        combined_scale = lilypond_notes_asc + lilypond_notes_desc
 
         # Give each note a quarter duration
-        notes_with_rhythm = ' '.join(f"{n}4" for n in lilypond_notes)
+        notes_with_rhythm = ' '.join(f"{n}4" for n in combined_scale)
         return notes_with_rhythm
 
     ############################################################################
