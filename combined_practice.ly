@@ -1,62 +1,63 @@
-\version "2.24.4"  % Specify the LilyPond version
+
+\version "2.24.4"  % Force LilyPond to treat code with this version
 
 \header {
-  title = "Practice Scales"
-  composer = "Traditional"
+    title = "Practice Scales"
+    composer = "Traditional"
 }
 
 \paper {
-  top-margin = 1.5\cm
-  bottom-margin = 1.5\cm
-  left-margin = 2\cm
-  right-margin = 2\cm
-  indent = 0
-  system-count = #0  % Allow multiple systems
-  line-width = 16\cm  % Adjust line width as needed
+    top-margin = 1.5\cm
+    bottom-margin = 1.5\cm
+    left-margin = 2\cm
+    right-margin = 2\cm
+    indent = 0
+    system-count = #0
+    line-width = 16\cm  % Adjust as needed
 }
+
 
 \markup \column {
   \center-column {
-    \bold "Major Scale in A (Major)"
+    \bold "Major Scale in C (Major)"
+  }
+}
+
+\score {
+  \new Staff {
+    \relative c' {
+      \key c \major
+      \time 4/4
+
+      c4 d4 e4 f4 g4 a4 b4 c4 d4 e4 f4 g4 a4 b4 c4 b4 a4 g4 f4 e4 d4 c4 b4 a4 g4 f4 e4 d4 c4
+    }
+  }
+  \layout {
+    indent = 0
+    ragged-right = ##t
+  }
+  \midi { }
+}
+
+
+\markup \column {
+  \center-column {
+    \bold "Minor Scale in A (Minor)"
   }
 }
 
 \score {
   \new Staff {
     \relative a' {
-      \key a \major
+      \key a \minor
       \time 4/4
 
-      a4 b4 cis4 d4 e4 fis4 gis4 a4 b4 cis4 d4 e4 fis4 gis4 a4 gis4 fis4 e4 d4 cis4 b4 a4 gis4 fis4 e4 d4 cis4 b4 a4
+      a4 b4 c4 d4 e4 f4 g4 a4 b4 c4 d4 e4 f4 g4 a4 g4 f4 e4 d4 c4 b4 a4 g4 f4 e4 d4 c4 b4 a4
     }
   }
-
   \layout {
-    indent = 0  % Remove indentation to center the music
-    ragged-right = ##t  % Allow ragged right margins
-  }
-  \midi { }
-}
-
-\markup \column {
-  \center-column {
-    \bold "Minor Scale in F# (Minor)"
-  }
-}
-
-\score {
-  \new Staff {
-    \relative f#' {
-      \key f# \minor
-      \time 4/4
-
-      fis4 gis4 a4 b4 cis4 d4 e4 fis4 gis4 a4 b4 cis4 d4 e4 fis4 e4 d4 cis4 b4 a4 gis4 fis4 e4 d4 cis4 b4 a4 gis4 fis4
-    }
-  }
-
-  \layout {
-    indent = 0  % Remove indentation to center the music
-    ragged-right = ##t  % Allow ragged right margins
+    indent = 0
+    ragged-right = ##t
   }
   \midi { }
 }
